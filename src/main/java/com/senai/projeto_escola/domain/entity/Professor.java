@@ -7,6 +7,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "professores")
+@Data
 public class Professor extends Usuario{
 
     @Column(nullable = false)

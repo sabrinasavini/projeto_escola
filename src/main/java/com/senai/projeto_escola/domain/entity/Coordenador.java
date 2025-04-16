@@ -6,7 +6,6 @@ import java.util.List;
 
 @Entity
 @Data
-
 public class Coordenador extends Usuario{
 
     @OneToMany(cascade = CascadeType.ALL)
