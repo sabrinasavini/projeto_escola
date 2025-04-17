@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escola - Cadastro de Usuários</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 1rem; }
+    h2 { margin-top: 2rem; color: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
+    th { background-color: #1d4ed8; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    label { display: block; margin-top: 0.5rem; }
+    input, select, button, textarea { width: 100%; padding: 0.5rem; margin-top: 0.2rem; }
+    .hidden { display: none; }
+    .error { color: red; font-size: 0.9rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Cadastro de Usuários</h1>
+  <form id="formUsuario">
+    <label>Nome: <input type="text" id="nome" required></label>
+    <label>Idade: <input type="number" id="idade" min="0" required></label>
+    <label>Tipo:
+      <select id="tipo" required>
+        <option value="">-- Selecione --</option>
+        <option value="professor">Professor</option>
+        <option value="coordenador">Coordenador</option>
+      </select>
+    </label>
+
+    <div id="professorFields" class="hidden">
+      <label>Turma: <input type="text" id="turma"></label>
+      <label>Unidades Curriculares:
+        <select id="unidades" multiple>
+          <option value="LOGICA_DE_PROGRAMACAO">Lógica de Programação</option>
+          <option value="BANCO_DE_DADOS">Banco de Dados</option>
+          <option value="SISTEMAS_OPERACIONAIS">Sistemas Operacionais</option>
+          <option value="REDES">Redes</option>
+          <option value="DESENVOLVIMENTO_WEB">Desenvolvimento Web</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="coordenadorFields" class="hidden">
+      <label>Professores na equipe:
+        <select id="equipe" multiple></select>
+      </label>
+    </div>
+
+    <button type="submit">Salvar</button>
+  </form>
+
+  <h2>Professores</h2>
+  <table id="tabelaProfessores">
+    <thead>
+      <tr><th>Nome</th><th>Idade</th><th>Turma</th><th>Unidades Curriculares</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Coordenadores</h2>
+  <table id="tabelaCoordenadores">
+    <thead>
+      <tr><th>Nome</th><th>Idade</th><th>Equipe</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+const urlProf = '/professores';
+const urlCoord = '/coordenadores';
+
+async function carregarTabelas() {
+  const profs = await fetch(urlProf).then(res => res.json());
+  const coord = await fetch(urlCoord).then(res => res.json());
+
+  const corpoProf = document.querySelector('#tabelaProfessores tbody');
+  corpoProf.innerHTML = '';
+  profs.forEach(p => {
+    corpoProf.innerHTML += `<tr>
+      <td>${p.nome}</td>
+      <td>${p.idade}</td>
+      <td>${p.turma}</td>
+      <td>${p.unidadesCurriculares.join(", ")}</td>
+    </tr>`;
+  });
+
+  const corpoCoord = document.querySelector('#tabelaCoordenadores tbody');
+  corpoCoord.innerHTML = '';
+  coord.forEach(c => {
+    corpoCoord.innerHTML += `<tr>
+      <td>${c.nome}</td>
+      <td>${c.idade}</td>
+      <td>
+        <ul>${c.equipe.map(p => `<li>${p.nome} (${p.unidadesCurriculares.length} UC)</li>`).join('')}</ul>
+      </td>
+    </tr>`;
+  });
+
+  // popular equipe do coordenador
+  const selectEquipe = document.getElementById('equipe');
+  selectEquipe.innerHTML = profs.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+}
+
+document.getElementById('tipo').addEventListener('change', e => {
+  document.getElementById('professorFields').classList.add('hidden');
+  document.getElementById('coordenadorFields').classList.add('hidden');
+  if (e.target.value === 'professor') {
+    document.getElementById('professorFields').classList.remove('hidden');
+  } else if (e.target.value === 'coordenador') {
+    document.getElementById('coordenadorFields').classList.remove('hidden');
+  }
+});
+
+document.getElementById('formUsuario').addEventListener('submit', async e => {
+  e.preventDefault();
+  const tipo = document.getElementById('tipo').value;
+  const nome = document.getElementById('nome').value;
+  const idade = parseInt(document.getElementById('idade').value);
+
+  if (tipo === 'professor') {
+    const turma = document.getElementById('turma').value;
+    const unidades = Array.from(document.getElementById('unidades').selectedOptions).map(o => o.value);
+
+    const prof = { nome, idade, turma, unidadesCurriculares: unidades };
+    await fetch(urlProf, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prof)
+    });
+  }
+  else if (tipo === 'coordenador') {
+    const equipe = Array.from(document.getElementById('equipe').selectedOptions).map(o => parseInt(o.value));
+    const equipeCompleta = await Promise.all(equipe.map(id => fetch(`${urlProf}/${id}`).then(r => r.json())));
+    const coord = { nome, idade, equipe: equipeCompleta };
+    await fetch(urlCoord, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(coord)
+    });
+  }
+
+  e.target.reset();
+  document.getElementById('professorFields').classList.add('hidden');
+  document.getElementById('coordenadorFields').classList.add('hidden');
+  await carregarTabelas();
+});
+
+carregarTabelas();
+</script>
+</body>
+</html>

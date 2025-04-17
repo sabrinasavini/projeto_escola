@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CoordenadorService {
@@ -44,5 +45,39 @@ public class CoordenadorService {
                         p.getId(), p.getNome(), p.getIdade(), p.getTurma(),p.getUnidadesCurriculares()
                 ) ).toList()
         )).toList();
+    }
+
+    public Optional <CoordenadorDto> buscarPorId(Long id) {
+        return coordenadorRepo.findById(id).map(c -> new CoordenadorDto(
+                c.getId(),
+                c.getNome(),
+                c.getIdade(),
+                c.getEquipeProfessores().stream().map(
+                        professor -> new ProfessorDto(
+                                professor.getId(),
+                                professor.getNome(),
+                                professor.getIdade(),
+                                professor.getTurma(),
+                                professor.getUnidadesCurriculares()
+                        )).toList()
+                        )
+                );
+    }
+    public boolean atualizar (Long id, CoordenadorDto coordenadorDto){
+        return coordenadorRepo.findById(id).map(c -> {
+            c.setNome(coordenadorDto.nome());
+            c.setIdade(coordenadorDto.idade());
+            c.setEquipeProfessores(mapEquipe(coordenadorDto.equipe()));
+            coordenadorRepo.save(c);
+            return true;
+        }).orElse(false);
+    }
+    public boolean deletar(Long id){
+        if (coordenadorRepo.existsById(id)){
+            coordenadorRepo.deleteById(id);
+            return true;
+        }else {
+            return false;
+        }
     }
 }
